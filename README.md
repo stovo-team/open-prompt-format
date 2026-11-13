@@ -1,6 +1,6 @@
 # Open Prompt Format
 
-**A repo-first way to write, version, load, and evaluate prompts.** Keep each prompt in one readable file, commit it with your application, and load it from Python or TypeScript.
+**A repo-first way to write, version, load, and evaluate prompts.** Keep each prompt in one readable file, commit it with your application, and load it from Python, TypeScript, Go, or Rust.
 
 [Syntax proposal](spec/SYNTAX.md) · [OPF v0.3 draft](spec/SYNTAX-0.3.md) · [Release setup](PUBLISHING.md)
 
@@ -115,6 +115,25 @@ npm run build
 ```
 
 Then add the local package to your application with `npm install /path/to/open-prompt-format/packages/typescript`.
+
+### Go (`langchaingo` adapter)
+
+```sh
+go get github.com/stovo-team/open-prompt-format/packages/go
+```
+
+Includes the core `opf` package and the `langchaingo` adapter (`github.com/stovo-team/open-prompt-format/packages/go/langchaingo`) implementing `prompts.FormatPrompter`, `prompts.MessageFormatter`, and `llms.MessageContent` conversion. See [packages/go/README.md](packages/go/README.md).
+
+### Rust (`langchain-rust` adapter)
+
+Add `open-prompt-format` and `open-prompt-format-langchain` from [packages/rust](packages/rust/README.md):
+
+```toml
+open-prompt-format = { path = "/path/to/open-prompt-format/packages/rust/crates/opf" }
+open-prompt-format-langchain = { path = "/path/to/open-prompt-format/packages/rust/crates/langchain" }
+```
+
+`OpfPromptTemplate` implements `langchain_rust::prompt::MessageFormatter` and `FormatPrompter`. See [packages/rust/README.md](packages/rust/README.md).
 
 ## Load and render
 
@@ -236,6 +255,12 @@ cd packages/typescript
 npm install
 npm test
 npm run build
+
+cd packages/go
+go test -v ./...
+
+cd packages/rust
+cargo test --workspace
 ```
 
 GitHub Actions runs the Python and TypeScript checks on pushes and pull requests. More detail and the remaining roadmap are in [PLAN.md](PLAN.md).
