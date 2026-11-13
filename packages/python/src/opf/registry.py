@@ -511,7 +511,10 @@ class Registry:
             raise OPFError("unknown registry prompt id {!r}".format(prompt_id))
         pointer = {"version": version, "digest": bundle["digest"]}
         self.config["prompts"][prompt_id].setdefault("channels", {})[channel] = pointer
-        serialized = yaml.safe_dump(self.config, allow_unicode=True, sort_keys=False)
+        existing_text = self.path.read_text(encoding="utf-8")
+        serialized = _update_channel_yaml(existing_text, prompt_id, channel, pointer)
+        if serialized is None or yaml.safe_load(serialized) != self.config:
+            serialized = yaml.safe_dump(self.config, allow_unicode=True, sort_keys=False)
         temporary = self.path.with_name(self.path.name + ".tmp")
         temporary.write_text(serialized, encoding="utf-8")
         os.replace(temporary, self.path)
@@ -521,3 +524,116 @@ class Registry:
         bundle = self._release(prompt_id, version)
         Path(output).write_bytes(_canonical(bundle) + b"\n")
         return bundle
+
+
+def _yaml_key_match(line: str, indent: int, key: str) -> bool:
+    """Return True if line defines a YAML mapping key at the exact indentation."""
+    stripped = line.lstrip(" ")
+    if len(line) - len(stripped) != indent or not stripped or stripped.startswith("#"):
+        return False
+    for candidate in (key, f'"{key}"', f"'{key}'"):
+        if stripped.startswith(candidate + ":"):
+            rest = stripped[len(candidate) + 1 :].strip()
+            return not rest or rest.startswith("#")
+    return False
+
+
+def _yaml_block_bounds(lines: list[str], start: int, end: int, key: str, expected_indent: int | None = None) -> tuple[int, int, int] | None:
+    """Locate a YAML mapping entry's (header_index, block_end, key_indent) within [start, end)."""
+    for idx in range(start, end):
+        raw = lines[idx].rstrip("\r\n")
+        stripped = raw.lstrip(" ")
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(raw) - len(stripped)
+        if expected_indent is not None and indent != expected_indent:
+            continue
+        if _yaml_key_match(raw, indent, key):
+            block_end = idx + 1
+            while block_end < end:
+                next_raw = lines[block_end].rstrip("\r\n")
+                next_stripped = next_raw.lstrip(" ")
+                if next_stripped and not next_stripped.startswith("#"):
+                    if len(next_raw) - len(next_stripped) <= indent:
+                        break
+                block_end += 1
+            return idx, block_end, indent
+    return None
+
+
+def _child_indent(lines: list[str], start: int, end: int, parent_indent: int) -> int:
+    for idx in range(start, end):
+        raw = lines[idx].rstrip("\r\n")
+        stripped = raw.lstrip(" ")
+        if stripped and not stripped.startswith("#"):
+            indent = len(raw) - len(stripped)
+            if indent > parent_indent:
+                return indent
+    return parent_indent + 2
+
+
+def _insert_index_before_trivia(lines: list[str], start: int, end: int) -> int:
+    idx = end
+    while idx > start:
+        stripped = lines[idx - 1].strip()
+        if stripped and not stripped.startswith("#"):
+            break
+        idx -= 1
+    return idx
+
+
+def _update_channel_yaml(text: str, prompt_id: str, channel: str, pointer: dict[str, str]) -> str | None:
+    """Update or insert a channel pointer in opf.yaml while preserving comments and formatting."""
+    newline = "\r\n" if "\r\n" in text else "\n"
+    lines = text.splitlines(keepends=True)
+    prompts_block = _yaml_block_bounds(lines, 0, len(lines), "prompts", expected_indent=0)
+    if prompts_block is None:
+        return None
+    p_start, p_end, p_indent = prompts_block
+    prompt_indent = _child_indent(lines, p_start + 1, p_end, p_indent)
+    prompt_block = _yaml_block_bounds(lines, p_start + 1, p_end, prompt_id, expected_indent=prompt_indent)
+    if prompt_block is None:
+        return None
+    e_start, e_end, e_indent = prompt_block
+    child_indent = _child_indent(lines, e_start + 1, e_end, e_indent)
+
+    def format_pointer_lines(indent_spaces: int) -> list[str]:
+        pad = " " * indent_spaces
+        dumped = yaml.safe_dump(pointer, allow_unicode=True, sort_keys=False).splitlines()
+        return [f"{pad}{item}{newline}" for item in dumped]
+
+    channels_block = _yaml_block_bounds(lines, e_start + 1, e_end, "channels", expected_indent=child_indent)
+    if channels_block is None:
+        insert_at = _insert_index_before_trivia(lines, e_start + 1, e_end)
+        if insert_at > 0 and not lines[insert_at - 1].endswith(("\n", "\r")):
+            lines[insert_at - 1] += newline
+        block_lines = [
+            f"{' ' * child_indent}channels:{newline}",
+            f"{' ' * (child_indent + 2)}{channel}:{newline}",
+            *format_pointer_lines(child_indent + 4),
+        ]
+        lines[insert_at:insert_at] = block_lines
+        return "".join(lines)
+
+    c_start, c_end, c_indent = channels_block
+    channel_indent = _child_indent(lines, c_start + 1, c_end, c_indent)
+    existing_channel = _yaml_block_bounds(lines, c_start + 1, c_end, channel, expected_indent=channel_indent)
+    if existing_channel is not None:
+        ch_start, ch_end, ch_indent = existing_channel
+        value_indent = _child_indent(lines, ch_start + 1, ch_end, ch_indent)
+        replace_end = _insert_index_before_trivia(lines, ch_start + 1, ch_end)
+        if not lines[ch_start].endswith(("\n", "\r")):
+            lines[ch_start] += newline
+        lines[ch_start + 1 : replace_end] = format_pointer_lines(value_indent)
+        return "".join(lines)
+
+    insert_at = _insert_index_before_trivia(lines, c_start + 1, c_end)
+    if insert_at > 0 and not lines[insert_at - 1].endswith(("\n", "\r")):
+        lines[insert_at - 1] += newline
+    block_lines = [
+        f"{' ' * channel_indent}{channel}:{newline}",
+        *format_pointer_lines(channel_indent + 2),
+    ]
+    lines[insert_at:insert_at] = block_lines
+    return "".join(lines)
+

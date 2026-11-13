@@ -8,28 +8,37 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e 'packages/python[jinja]'
       - run: python -m unittest discover -s packages/python/tests -v
       - run: opf validate-collection examples
+      - run: opf check examples
       - run: opf verify-all --registry opf.yaml
       - run: python scripts/langfuse_smoke.py
 
   typescript:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "24"]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ matrix.node-version }}
       - run: npm install
         working-directory: packages/typescript
       - run: npm test
@@ -38,3 +47,5 @@ jobs:
         working-directory: packages/typescript
       - run: npm run build
         working-directory: packages/typescript
+      - run: node packages/typescript/dist/cli.js validate-collection examples
+      - run: node packages/typescript/dist/cli.js verify-all --registry opf.yaml

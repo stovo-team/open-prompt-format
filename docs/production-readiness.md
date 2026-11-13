@@ -68,7 +68,7 @@ Repository-scale adoption remains unverified until the adapters and findings are
 
 To repeat the Langfuse check, use a non-production instance and set `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL` for that instance before running `PYTHONPATH=packages/python/src python3 scripts/langfuse_smoke.py --publish`. The adapter stores the canonical bundle in Langfuse prompt config. Langfuse prompt publication and retrieval do not invoke a model; configure a model-provider key only for a separate test that actually calls a model.
 
-The Python `promote` command currently rewrites YAML formatting and comments. Review the generated `opf.yaml` diff before committing a promotion.
+The Python `promote` command preserves YAML comments and formatting for standard block-style `opf.yaml` files (falling back to `yaml.safe_dump` only if the file uses inline flow syntax or non-standard structure). Review the generated `opf.yaml` diff before committing a promotion.
 
 ## GitHub consumer workflow release gate
 

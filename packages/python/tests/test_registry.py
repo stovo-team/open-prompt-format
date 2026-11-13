@@ -188,6 +188,43 @@ class RegistryTests(unittest.TestCase):
             with self.assertRaisesRegex(OPFError, "pinned local release"):
                 remote.get("support.reply", version="1.0.0", expected_digest="sha256:" + "0" * 64)
 
+    def test_promote_preserves_yaml_comments_and_formatting(self):
+        commented_yaml = (
+            "# Registry configuration\n"
+            "schema: opf-registry/1\n"
+            "prompts:\n"
+            "  # Primary support prompt\n"
+            "  support.reply:\n"
+            "    renderer: opf\n"
+            "    source: prompts/reply.md  # relative path\n"
+        )
+        (self.root / "opf.yaml").write_text(commented_yaml, encoding="utf-8")
+        git(self.root, "add", "opf.yaml")
+        git(self.root, "commit", "-qm", "add comments to opf.yaml")
+
+        registry = Registry.local(self.root / "opf.yaml")
+        r1 = registry.release("support.reply", "1.0.0")
+        registry.promote("support.reply", "1.0.0", "production")
+        after_first = (self.root / "opf.yaml").read_text(encoding="utf-8")
+        self.assertIn("# Registry configuration", after_first)
+        self.assertIn("# Primary support prompt", after_first)
+        self.assertIn("source: prompts/reply.md  # relative path", after_first)
+
+        git(self.root, "add", "opf.yaml")
+        git(self.root, "commit", "-qm", "promote 1.0.0")
+
+        (self.root / "prompts/reply.md").write_text(PROMPT.replace("briefly", "clearly"), encoding="utf-8")
+        git(self.root, "add", "prompts/reply.md")
+        git(self.root, "commit", "-qm", "update prompt")
+        r2 = registry.release("support.reply", "1.0.1")
+        registry.promote("support.reply", "1.0.1", "production")
+        after_second = (self.root / "opf.yaml").read_text(encoding="utf-8")
+        self.assertIn("# Registry configuration", after_second)
+        self.assertIn("# Primary support prompt", after_second)
+        self.assertIn("source: prompts/reply.md  # relative path", after_second)
+        self.assertIn(r2["digest"], after_second)
+        self.assertNotIn(r1["digest"], after_second)
+
 
 if __name__ == "__main__":
     unittest.main()

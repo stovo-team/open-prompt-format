@@ -35,6 +35,9 @@
   "invalid": [
     "prompts/invalid-duplicate-key.md",
     "prompts/invalid-unknown-input.md",
-    "prompts/invalid-template.md"
+    "prompts/invalid-template.md",
+    "prompts/invalid-id.md",
+    "prompts/invalid-missing-role.md",
+    "prompts/invalid-missing-format.md"
   ]
 }
