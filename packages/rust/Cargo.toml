@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "crates/opf",
+  "crates/langchain",
+]
+resolver = "2"

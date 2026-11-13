@@ -6,3 +6,4 @@ packages/typescript/node_modules/
 packages/typescript/dist/
 packages/python/.venv/
 .promptfoo/
+packages/rust/target/

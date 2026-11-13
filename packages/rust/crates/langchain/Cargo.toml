@@ -1,0 +1,13 @@
+[package]
+name = "open-prompt-format-langchain"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "langchain-rust adapter for Open Prompt Format"
+repository = "https://github.com/stovo-team/open-prompt-format"
+
+[dependencies]
+open-prompt-format = { path = "../opf" }
+langchain-rust = "8.0.0"
+serde_json = "1"
+thiserror = "2"
