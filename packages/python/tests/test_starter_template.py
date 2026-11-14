@@ -29,7 +29,7 @@ class StarterTemplateTests(unittest.TestCase):
             verified = subprocess.run(run_cli + ["verify-all", "--registry", "opf.yaml"], cwd=target, env=env, capture_output=True, text=True)
             self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
             workflow = (target / ".github/workflows/opf.yml").read_text(encoding="utf-8")
-            self.assertIn("stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.0", workflow)
+            self.assertIn("stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.1", workflow)
             self.assertIn("default: false", workflow)
             self.assertNotIn("OPENAI_API_KEY", workflow)
             self.assertNotIn("ANTHROPIC_API_KEY", workflow)

@@ -17,7 +17,7 @@ on:
         description: Exact published open-prompt-format package version.
         type: string
         required: true
-        default: 0.2.0
+        default: 0.2.1
       eval-config:
         description: Promptfoo config path relative to project-path.
         type: string
@@ -172,7 +172,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: stovo-team/open-prompt-format
-          ref: v0.2.0
+          ref: v0.2.1
           path: opf-tooling
 
       - name: Set up Python

@@ -46,7 +46,7 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertEqual(call["block-on-regression"]["default"], "false")
         dispatch = workflow["on"]["workflow_dispatch"]["inputs"]
         self.assertIn("base-ref", dispatch)
-        self.assertEqual(dispatch["opf-version"]["default"], "0.2.0")
+        self.assertEqual(dispatch["opf-version"]["default"], "0.2.1")
 
         job = workflow["jobs"]["prompt-eval"]
         self.assertEqual(job["environment"]["name"], "prompt-eval")

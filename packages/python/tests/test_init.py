@@ -31,11 +31,11 @@ class InitGitHubTests(unittest.TestCase):
         called = workflow["jobs"]["opf-check"]
         self.assertEqual(
             called["uses"],
-            "stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.0",
+            "stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.1",
         )
         self.assertEqual(
             called["with"],
-            {"project-path": ".", "registry": "opf.yaml", "opf-version": "0.2.0"},
+            {"project-path": ".", "registry": "opf.yaml", "opf-version": "0.2.1"},
         )
         self.assertNotIn("secrets", called)
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-prompt-format"
-version = "0.2.0"
+version = "0.2.1"
 description = "Load and render Open Prompt Format files"
 readme = "README.md"
 license = { file = "LICENSE" }

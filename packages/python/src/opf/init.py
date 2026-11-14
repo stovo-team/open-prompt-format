@@ -122,11 +122,11 @@ permissions:
 
 jobs:
   opf-check:
-    uses: stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.0
+    uses: stovo-team/open-prompt-format/.github/workflows/opf-check.yml@v0.2.1
     with:
       project-path: .
       registry: opf.yaml
-      opf-version: 0.2.0
+      opf-version: 0.2.1
 """,
             )
         )
