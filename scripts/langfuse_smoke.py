@@ -3,7 +3,6 @@
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 import uuid
@@ -14,7 +13,6 @@ from opf.publish import langfuse_plan, publish_langfuse
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DIST = ROOT / "packages/typescript/dist/index.js"
 VERSION = "0.0.1"
 
 
@@ -29,8 +27,6 @@ def main() -> None:
     if args.publish:
         if not os.environ.get("LANGFUSE_PUBLIC_KEY") or not os.environ.get("LANGFUSE_SECRET_KEY"):
             parser.error("set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY in the environment")
-        if not DIST.exists() or not shutil.which("node"):
-            parser.error("build packages/typescript and make Node.js available before publishing")
 
     prompt_id = "opf-smoke-" + uuid.uuid4().hex[:12]
     with tempfile.TemporaryDirectory(prefix="opf-langfuse-smoke-") as temporary:
@@ -65,17 +61,7 @@ def main() -> None:
         actual = Registry.langfuse().get(prompt_id, version=VERSION, expected_digest=plan["digest"]).render({"value": "hello"}).messages
         if actual != expected:
             raise RuntimeError("Python remote rendering differs from the local release")
-
-        node_script = """
-import { pathToFileURL } from 'node:url';
-const { Registry } = await import(pathToFileURL(process.env.OPF_SMOKE_DIST).href);
-const prompt = await Registry.langfuse().get(process.env.OPF_SMOKE_ID, { version: '0.0.1', expectedDigest: process.env.OPF_SMOKE_DIGEST });
-const messages = prompt.render({ value: 'hello' }).messages;
-if (messages[0].content !== 'Reply briefly.' || messages[1].content !== 'hello') throw new Error('TypeScript remote rendering differs from the local release');
-"""
-        environment = {**os.environ, "OPF_SMOKE_DIST": str(DIST), "OPF_SMOKE_ID": prompt_id, "OPF_SMOKE_DIGEST": plan["digest"]}
-        subprocess.run(["node", "--input-type=module", "-e", node_script], env=environment, check=True)
-        print(json.dumps({**summary, "dry_run": False, "remote_version": first["remote_version"], "python": "ok", "typescript": "ok"}, ensure_ascii=False))
+        print(json.dumps({**summary, "dry_run": False, "remote_version": first["remote_version"], "python": "ok"}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

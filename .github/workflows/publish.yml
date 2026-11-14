@@ -10,18 +10,13 @@ on:
         type: boolean
         required: true
         default: true
-      publish_npm:
-        description: Publish the TypeScript package to npm
-        type: boolean
-        required: true
-        default: true
 
 permissions:
   contents: read
 
 jobs:
   checks:
-    if: github.event_name == 'push' || inputs.publish_python || inputs.publish_npm
+    if: github.event_name == 'push' || inputs.publish_python
     uses: ./.github/workflows/ci.yml
 
   publish-python:
@@ -43,25 +38,3 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/python/dist/
-
-  publish-npm:
-    if: github.event_name == 'push' || inputs.publish_npm
-    needs: checks
-    runs-on: ubuntu-latest
-    environment:
-      name: npm
-      url: https://www.npmjs.com/package/open-prompt-format
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          registry-url: https://registry.npmjs.org
-      - run: npm install
-        working-directory: packages/typescript
-      - run: npm run build
-        working-directory: packages/typescript
-      - run: npm publish --provenance
-        working-directory: packages/typescript

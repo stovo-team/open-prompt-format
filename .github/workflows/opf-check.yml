@@ -219,11 +219,6 @@ jobs:
             --repo-root "$GITHUB_WORKSPACE/caller" --project-path "$PROJECT_PATH" --output-dir "$RUNNER_TEMP/opf-pair")
           python -c 'import json,os,sys; d=json.loads(sys.argv[1]); f=open(os.environ["GITHUB_OUTPUT"],"a"); f.write("baseline_config="+d["baseline_config"]+"\n"); f.write("candidate_config="+d["candidate_config"]+"\n"); f.close()' "$PAIR_PATHS"
 
-      - name: Install OPF Promptfoo adapter dependencies
-        if: steps.credentials.outputs.available == 'true'
-        working-directory: opf-tooling/packages/typescript
-        run: npm ci && npm run build
-
       - name: Run paired Promptfoo evals and write sanitized comparison
         if: steps.credentials.outputs.available == 'true'
         env:
