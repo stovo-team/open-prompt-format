@@ -1,6 +1,6 @@
 # Open Prompt Format
 
-**A repo-first way to write, version, load, and evaluate prompts.** Keep each prompt in one readable file, commit it with your application, and load it from Python, TypeScript, Go, or Rust.
+**A repo-first way to write, version, load, and evaluate prompts.** Keep each prompt in one readable file, commit it with your application, and load it from Python, Go, or Rust.
 
 [Syntax proposal](spec/SYNTAX.md) · [OPF v0.3 draft](spec/SYNTAX-0.3.md) · [Release setup](PUBLISHING.md)
 
@@ -96,25 +96,13 @@ The [starter project](examples/starter-template/README.md) is currently a checke
 
 ## Install
 
-Python 0.2.0 is available on PyPI. The npm package is not published yet.
+The Python package provides the `opf` CLI. Install the published package from PyPI, or install this checkout to use the current source:
 
 ### Python
 
 ```sh
 python -m pip install open-prompt-format
 ```
-
-### TypeScript / JavaScript
-
-Until the npm release is ready, build and install from a clone:
-
-```sh
-cd packages/typescript
-npm install
-npm run build
-```
-
-Then add the local package to your application with `npm install /path/to/open-prompt-format/packages/typescript`.
 
 ### Go (`langchaingo` adapter)
 
@@ -153,15 +141,7 @@ print(messages)
 print(prompt.source_digest)  # sha256:<64 lowercase hex characters>
 ```
 
-TypeScript offers the same operations:
-
-```ts
-import { loadById } from "open-prompt-format";
-
-const prompt = await loadById("support.reply", "examples");
-const messages = prompt.render({ customer_message: "My order is late." });
-console.log(prompt.sourceDigest);
-```
+The Go and Rust packages also load and render prompts; their language-specific APIs and framework adapters are documented in [packages/go](packages/go/README.md) and [packages/rust](packages/rust/README.md). The Python package is currently the reference implementation and the only package that provides the `opf` CLI and registry, migration, and project-check workflows.
 
 Your application passes `messages` to its provider SDK. OPF does not select a model or silently translate provider-specific settings. v0.1 supports string inputs and simple `{{ variable }}` substitution; unsupported template expressions fail validation.
 
@@ -179,15 +159,6 @@ messages = prepared.messages
 receipt = prepared.call_receipt(provider="openai", model=os.environ["LLM_MODEL"], parameters={"temperature": 0.2})
 ```
 
-```ts
-import { Registry } from "open-prompt-format";
-
-const registry = await Registry.local("opf.yaml");
-const prepared = (await registry.get("support.reply")).render({ customer_message: "My order is late." });
-const messages = prepared.messages;
-const receipt = prepared.callReceipt({ provider: "openai", model: process.env.LLM_MODEL!, parameters: { temperature: 0.2 } });
-```
-
 The model comes from your application or deployment config. The receipt records its resolved value; OPF does not require a model in the prompt file.
 
 After committing `opf.yaml` and the prompt, create and promote a release:
@@ -201,7 +172,7 @@ opf verify-all --registry opf.yaml
 opf export support.reply@1.0.0 --output support.reply.json
 ```
 
-The Python and TypeScript SDKs can load the exported bundle without Git. The Python SDK also wraps existing `.md`/`.j2` files with `renderer: jinja2` when installed with `open-prompt-format[jinja]`; TypeScript explicitly rejects Jinja rendering. Jinja migration can preserve a source as a local registry entry when it cannot prove a core conversion.
+The Python SDK can load the exported bundle without Git. It also wraps existing `.md`/`.j2` files with `renderer: jinja2` when installed with `open-prompt-format[jinja]`. Jinja migration can preserve a source as a local registry entry when it cannot prove a core conversion.
 
 To publish a verified OPF release to Langfuse, inspect the mapping first:
 
@@ -220,12 +191,7 @@ The adapter also stores the canonical OPF bundle in Langfuse's prompt config. Ch
 prepared = Registry.langfuse().get("support.reply", version="1.0.0").render({"customer_message": "Hello"})
 ```
 
-```ts
-const remote = Registry.langfuse();
-const prepared = (await remote.get("support.reply", { version: "1.0.0" })).render({ customer_message: "Hello" });
-```
-
-Both SDKs verify the bundle digest and compare Langfuse's chat template with the stored source. Choosing a remote registry never happens automatically from environment variables.
+The Python SDK verifies the bundle digest and compares Langfuse's chat template with the stored source. Choosing a remote registry never happens automatically from environment variables.
 
 ## Promptfoo evals
 
@@ -234,27 +200,21 @@ The example config evaluates the checked-in prompt against OpenAI and Anthropic 
 ```sh
 export OPENAI_API_KEY=...
 export ANTHROPIC_API_KEY=...
-cd packages/typescript && npm install && npm run build
-cd ../..
+python -m pip install -e ./packages/python
 npx promptfoo eval -c evals/promptfooconfig.yaml
 ```
 
-Model requests may incur provider charges. Change the providers and test cases in [the Promptfoo config](evals/promptfooconfig.yaml) to match your setup.
+The adapter calls the Python `opf` CLI to render the checked-in prompt. Model requests may incur provider charges. Change the providers and test cases in [the Promptfoo config](evals/promptfooconfig.yaml) to match your setup.
 
 ## Version and digest
 
-In `opf/0.1`, `version` is a human-managed file-level SemVer. In `opf/0.2`, the file omits `version`; `opf release` binds a SemVer to a committed bundle using an annotated Git tag and SHA-256 digest. `source_digest` / `sourceDigest` still identifies one normalized source file. See the [registry contract](spec/REGISTRY.md) for exact rules.
+In `opf/0.1`, `version` is a human-managed file-level SemVer. In `opf/0.2`, the file omits `version`; `opf release` binds a SemVer to a committed bundle using an annotated Git tag and SHA-256 digest. `source_digest` identifies one normalized source file. See the [registry contract](spec/REGISTRY.md) for exact rules.
 
 ## Development
 
 ```sh
 python -m pip install -e packages/python
 python -m unittest discover -s packages/python/tests -v
-
-cd packages/typescript
-npm install
-npm test
-npm run build
 
 cd packages/go
 go test -v ./...
@@ -263,13 +223,13 @@ cd packages/rust
 cargo test --workspace
 ```
 
-GitHub Actions runs the Python and TypeScript checks on pushes and pull requests. More detail and the remaining roadmap are in [PLAN.md](PLAN.md).
+The current GitHub Actions CI runs the Python tests and CLI checks on pushes and pull requests. Go and Rust tests can be run with the commands above. More detail and the remaining roadmap are in [PLAN.md](PLAN.md).
 
 ## Project status
 
-This repository contains experimental v0.1/v0.2 readers, a v0.3 draft, and local registry and migration implementations. The live Promptfoo eval and independent implementations have not yet been run. The format may change before a stable release; migration adapters are intentionally limited and have not been independently validated.
+This repository contains experimental Python, Go, and Rust readers, a v0.3 draft, and Python implementations of the CLI, local registry, and migration workflows. The live Promptfoo eval and independent implementations have not yet been run. The format may change before a stable release; migration adapters are intentionally limited and have not been independently validated.
 
-The [registry RFC](docs/registry-rfc.md) describes the wider direction. The local config, Git releases, channels, Python Jinja wrapper, portable export, and initial Langfuse publish/read adapter are implemented. A manual check on 2026-10-06 verified exported-bundle loading without Git, rollback by promoting a prior release, conflict detection for concurrent same-channel promotions, and live publish/read against a self-hosted Langfuse v4 instance. The Langfuse check exercised prompt publication and retrieval through both SDKs; it did not call a model. Hosted Langfuse configurations, provider size limits, independent format implementations, and the live Promptfoo eval remain unverified.
+The [registry RFC](docs/registry-rfc.md) describes the wider direction. The local config, Git releases, channels, Python Jinja wrapper, portable export, and initial Langfuse publish/read adapter are implemented. A manual check on 2026-10-06 verified exported-bundle loading without Git, rollback by promoting a prior release, conflict detection for concurrent same-channel promotions, and live publish/read against a self-hosted Langfuse v4 instance. The Langfuse check exercised prompt publication and retrieval through Python; it did not call a model. Hosted Langfuse configurations, provider size limits, independent format implementations, and the live Promptfoo eval remain unverified.
 
 The [production readiness note](docs/production-readiness.md) records the automated and manual checks, plus the remaining production-readiness gates.
 

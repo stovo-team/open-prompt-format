@@ -2,5 +2,6 @@
 members = [
   "crates/opf",
   "crates/langchain",
+  "crates/cli",
 ]
 resolver = "2"
